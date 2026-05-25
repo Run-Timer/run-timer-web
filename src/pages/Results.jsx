@@ -63,14 +63,14 @@ function Results() {
 
     return () => unsubscribe();
   }, [navigate]);
-/*
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-black text-gray-900 dark:text-white flex items-center justify-center transition-colors duration-300">
         <p className="text-xl text-gray-400 dark:text-gray-500 animate-pulse">Cargando telemetría...</p>
       </div>
     );
-  }*/
+  }
 
   const latestRace = results[0] || null;
 

@@ -27,6 +27,21 @@ function Profile() {
   const [stats, setStats] = useState({ bestTime: "--", wins: 0, total: 0 });
   const [loading, setLoading] = useState(true);
 
+  const loadProfileDocument = async (userId) => {
+    const userCollections = ["users", "usuarios"];
+
+    for (const collectionName of userCollections) {
+      const userDocRef = doc(db, collectionName, userId);
+      const userDoc = await getDoc(userDocRef);
+
+      if (userDoc.exists()) {
+        return userDoc.data();
+      }
+    }
+
+    return null;
+  };
+
   useEffect(() => {
     const fetchUserData = async () => {
       const user = auth.currentUser;
@@ -36,14 +51,11 @@ function Profile() {
       }
 
       try {
-        // 1. Conseguir perfil de Firestore real
-        const userDocRef = doc(db, "usuarios", user.uid);
-        const userDoc = await getDoc(userDocRef);
+        const profile = await loadProfileDocument(user.uid);
 
-        if (userDoc.exists()) {
-          setProfileData(userDoc.data());
+        if (profile) {
+          setProfileData(profile);
         } else {
-          // Si no hay documento en Firestore, usamos los datos de Auth básicos
           setProfileData((prev) => ({
             ...prev,
             nombre: user.displayName || "Usuario de RunTimer",

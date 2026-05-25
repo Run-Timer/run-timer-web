@@ -11,11 +11,17 @@ import {
   serverTimestamp,
 } from "firebase/firestore";
 
-export {
+import {
   auth,
   db,
   googleProvider,
 } from "../firebase/firebase";
+
+export {
+  auth,
+  db,
+  googleProvider,
+};
 export const registerUser = async (
   email,
   password,

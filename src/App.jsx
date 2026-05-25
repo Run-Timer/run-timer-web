@@ -1,4 +1,8 @@
-import { useEffect } from "react";
+import {
+  Suspense,
+  lazy,
+  useEffect,
+} from "react";
 import {
   Route,
   Routes,
@@ -7,16 +11,61 @@ import {
 } from "react-router-dom";
 import { AnimatePresence } from "framer-motion";
 
-import Competitions from "./pages/Competitions";
-import Dashboard from "./pages/Dashboard";
-import Login from "./pages/Login";
-import ParticipantProfile from "./pages/ParticipantProfile";
-import Profile from "./pages/Profile";
-import Register from "./pages/Register";
-import Results from "./pages/Results";
-import Settings from "./pages/Settings";
 import ProtectedRoute from "./components/ProtectedRoute";
-import EditProfile from "./pages/EditProfile";
+
+const Competitions = lazy(() =>
+  import("./pages/Competitions")
+);
+const Dashboard = lazy(() =>
+  import("./pages/Dashboard")
+);
+const Login = lazy(() =>
+  import("./pages/Login")
+);
+const ParticipantProfile = lazy(() =>
+  import("./pages/ParticipantProfile")
+);
+const Profile = lazy(() =>
+  import("./pages/Profile")
+);
+const Register = lazy(() =>
+  import("./pages/register")
+);
+const Results = lazy(() =>
+  import("./pages/Results")
+);
+const Settings = lazy(() =>
+  import("./pages/Settings")
+);
+const EditProfile = lazy(() =>
+  import("./pages/EditProfile")
+);
+
+function RouteLoading() {
+  return (
+    <div className="min-h-screen bg-gray-50 text-gray-900 dark:bg-black dark:text-white flex items-center justify-center transition-colors duration-300">
+      <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
+        Cargando vista...
+      </p>
+    </div>
+  );
+}
+
+function withSuspense(element) {
+  return (
+    <Suspense fallback={<RouteLoading />}>
+      {element}
+    </Suspense>
+  );
+}
+
+function withProtection(element) {
+  return (
+    <ProtectedRoute>
+      {element}
+    </ProtectedRoute>
+  );
+}
 
 function AnimatedRoutes() {
   const location = useLocation();
@@ -24,49 +73,66 @@ function AnimatedRoutes() {
   return (
     <AnimatePresence mode="wait">
       <Routes location={location} key={location.pathname}>
-        {/* Rutas Públicas */}
-        <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} />
-
-        {/* Redirección por defecto */}
+        <Route
+          path="/login"
+          element={withSuspense(<Login />)}
+        />
+        <Route
+          path="/register"
+          element={withSuspense(
+            <Register />
+          )}
+        />
         <Route path="/" element={<Navigate to="/dashboard" />} />
 
-        {/* Rutas Privadas Protegidas */}
-        <Route path="/dashboard" element={
-          <ProtectedRoute>
-            <Dashboard />
-          </ProtectedRoute>
-        } />
-        <Route path="/results" element={
-          <ProtectedRoute>
-            <Results />
-          </ProtectedRoute>
-        } />
-        <Route path="/competitions" element={
-          <ProtectedRoute>
-            <Competitions />
-          </ProtectedRoute>
-        } />
-        <Route path="/settings" element={
-          <ProtectedRoute>
-            <Settings />
-          </ProtectedRoute>
-        } />
-        <Route path="/profile" element={
-          <ProtectedRoute>
-            <Profile />
-          </ProtectedRoute>
-        } />
-        <Route path="/participantProfile" element={
-          <ProtectedRoute>
-            <ParticipantProfile />
-          </ProtectedRoute>
-        } />
-        <Route path="/editProfile" element={
-          <ProtectedRoute>
-            <EditProfile />
-          </ProtectedRoute>
-        } />
+        <Route
+          path="/dashboard"
+          element={withProtection(
+            withSuspense(<Dashboard />)
+          )}
+        />
+        <Route
+          path="/results"
+          element={withProtection(
+            withSuspense(<Results />)
+          )}
+        />
+        <Route
+          path="/competitions"
+          element={withProtection(
+            withSuspense(
+              <Competitions />
+            )
+          )}
+        />
+        <Route
+          path="/settings"
+          element={withProtection(
+            withSuspense(<Settings />)
+          )}
+        />
+        <Route
+          path="/profile"
+          element={withProtection(
+            withSuspense(<Profile />)
+          )}
+        />
+        <Route
+          path="/participantProfile"
+          element={withProtection(
+            withSuspense(
+              <ParticipantProfile />
+            )
+          )}
+        />
+        <Route
+          path="/editProfile"
+          element={withProtection(
+            withSuspense(
+              <EditProfile />
+            )
+          )}
+        />
       </Routes>
     </AnimatePresence>
   );

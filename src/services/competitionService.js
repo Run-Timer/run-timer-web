@@ -1,56 +1,146 @@
 import {
-  collection,
-  getDocs,
   addDoc,
-  doc,
-  updateDoc,
+  arrayRemove,
+  arrayUnion,
+  collection,
   deleteDoc,
+  doc,
+  getDocs,
+  onSnapshot,
+  updateDoc,
 } from "firebase/firestore";
 
 import { db } from "../firebase/firebase";
 
-const competitionsRef =
-  collection(db, "competitions");
+export const COMPETITION_COLLECTIONS = [
+  "competitions",
+  "competencias",
+];
 
-/* OBTENER TODAS */
+const normalizeCompetition = (
+  snapshot,
+  sourceCollection
+) => ({
+  id: snapshot.id,
+  sourceCollection,
+  ...snapshot.data(),
+});
+
+const buildCompetitionList = (
+  snapshotsByCollection
+) => {
+  const competitions = new Map();
+
+  [...COMPETITION_COLLECTIONS]
+    .reverse()
+    .forEach((collectionName) => {
+      const docs =
+        snapshotsByCollection.get(collectionName) || [];
+
+      docs.forEach((item) => {
+        competitions.set(item.id, item);
+      });
+    });
+
+  return Array.from(competitions.values());
+};
+
+export const subscribeToCompetitions = (
+  onData,
+  onError
+) => {
+  const snapshotsByCollection = new Map();
+
+  const unsubscribes =
+    COMPETITION_COLLECTIONS.map((collectionName) =>
+      onSnapshot(
+        collection(db, collectionName),
+        (snapshot) => {
+          snapshotsByCollection.set(
+            collectionName,
+            snapshot.docs.map((docSnapshot) =>
+              normalizeCompetition(
+                docSnapshot,
+                collectionName
+              )
+            )
+          );
+
+          onData(
+            buildCompetitionList(
+              snapshotsByCollection
+            )
+          );
+        },
+        (error) => {
+          if (onError) {
+            onError(error);
+          }
+        }
+      )
+    );
+
+  return () => {
+    unsubscribes.forEach((unsubscribe) =>
+      unsubscribe()
+    );
+  };
+};
+
 export const getCompetitions =
   async () => {
-    const snapshot =
-      await getDocs(
-        competitionsRef
-      );
+    const snapshots = await Promise.all(
+      COMPETITION_COLLECTIONS.map(
+        (collectionName) =>
+          getDocs(
+            collection(db, collectionName)
+          ).then((snapshot) =>
+            snapshot.docs.map((docSnapshot) =>
+              normalizeCompetition(
+                docSnapshot,
+                collectionName
+              )
+            )
+          )
+      )
+    );
 
-    return snapshot.docs.map(
-      (doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      })
+    const snapshotsByCollection = new Map(
+      COMPETITION_COLLECTIONS.map(
+        (collectionName, index) => [
+          collectionName,
+          snapshots[index],
+        ]
+      )
+    );
+
+    return buildCompetitionList(
+      snapshotsByCollection
     );
   };
 
-/* CREAR */
 export const createCompetition =
   async (
-    competitionData
+    competitionData,
+    sourceCollection = "competitions"
   ) => {
-    return await addDoc(
-      competitionsRef,
+    return addDoc(
+      collection(db, sourceCollection),
       competitionData
     );
   };
 
-/* ACTUALIZAR */
 export const updateCompetition =
   async (
     id,
-    data
+    data,
+    sourceCollection = "competitions"
   ) => {
-    const competitionDoc =
-      doc(
-        db,
-        "competitions",
-        id
-      );
+    const competitionDoc = doc(
+      db,
+      sourceCollection,
+      id
+    );
 
     await updateDoc(
       competitionDoc,
@@ -58,17 +148,41 @@ export const updateCompetition =
     );
   };
 
-/* ELIMINAR */
 export const deleteCompetition =
-  async (id) => {
-    const competitionDoc =
-      doc(
-        db,
-        "competitions",
-        id
-      );
+  async (
+    id,
+    sourceCollection = "competitions"
+  ) => {
+    const competitionDoc = doc(
+      db,
+      sourceCollection,
+      id
+    );
 
     await deleteDoc(
       competitionDoc
+    );
+  };
+
+export const toggleCompetitionRegistration =
+  async (
+    competitionId,
+    userId,
+    isRegistered,
+    sourceCollection = "competitions"
+  ) => {
+    const competitionDoc = doc(
+      db,
+      sourceCollection,
+      competitionId
+    );
+
+    await updateDoc(
+      competitionDoc,
+      {
+        userIds: isRegistered
+          ? arrayRemove(userId)
+          : arrayUnion(userId),
+      }
     );
   };

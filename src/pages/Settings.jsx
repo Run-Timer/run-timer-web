@@ -13,7 +13,7 @@ import {
   ArrowLeft,
 } from "lucide-react";
 
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "../context/useAuth";
 import { logoutUser } from "../services/authService";
 import { auth } from "../firebase/firebase"; 
 import { sendPasswordResetEmail } from "firebase/auth";

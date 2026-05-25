@@ -1,4 +1,5 @@
 import { useState, useRef } from "react";
+import { useEffect } from "react";
 import { motion } from "framer-motion";
 import {
   User,
@@ -11,7 +12,7 @@ import {
   AlertCircle,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "../context/useAuth";
 
 function EditProfile() {
   const navigate = useNavigate();
@@ -23,7 +24,6 @@ function EditProfile() {
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   
-  const [imageFile, setImageFile] = useState(null);
   const [imagePreview, setImagePreview] = useState(
     userData?.photoUrl || currentUser?.photoURL || "https://ui-avatars.com/api/?name=RunTimer"
   );
@@ -31,10 +31,23 @@ function EditProfile() {
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState({ type: null, message: "" });
 
+  useEffect(() => {
+    return () => {
+      if (
+        imagePreview.startsWith(
+          "blob:"
+        )
+      ) {
+        URL.revokeObjectURL(
+          imagePreview
+        );
+      }
+    };
+  }, [imagePreview]);
+
   const handleImageChange = (e) => {
     const file = e.target.files[0];
     if (file) {
-      setImageFile(file);
       setImagePreview(URL.createObjectURL(file));
     }
   };
@@ -62,8 +75,6 @@ function EditProfile() {
     }
 
     try {
-      console.log("Datos enviados:", { nombre, imageFile, currentPassword, newPassword });
-
       setStatus({ type: "success", message: "Perfil actualizado correctamente." });
       
       setCurrentPassword("");
@@ -135,7 +146,7 @@ function EditProfile() {
               <button
                 type="button"
                 onClick={triggerFileInput}
-                className="px-4 py-2 bg-gray-100 hover:bg-gray-200 dark:bg-zinc-800 dark:hover:bg-zinc-750 text-gray-800 dark:text-gray-200 border border-gray-200 dark:border-zinc-700 rounded-xl text-sm font-semibold transition"
+                className="px-4 py-2 bg-gray-100 hover:bg-gray-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-gray-800 dark:text-gray-200 border border-gray-200 dark:border-zinc-700 rounded-xl text-sm font-semibold transition"
               >
                 Cambiar imagen
               </button>

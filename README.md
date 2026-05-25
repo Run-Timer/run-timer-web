@@ -1,57 +1,48 @@
-# React + Vite
+# RunTimer Web
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Aplicacion web en React + Vite para autenticacion, monitoreo y visualizacion de competencias de robots usando Firebase.
 
-Currently, two official plugins are available:
+## Requisitos
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- Node.js 20+
+- Una configuracion valida de Firebase Web
 
-## React Compiler
+## Variables de entorno
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+Crea un archivo `.env` basado en `.env.example`.
 
-## Expanding the ESLint configuration
+## Scripts
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+- `npm run dev`: servidor local con Vite
+- `npm run build`: build de produccion
+- `npm run lint`: validacion con ESLint
+- `npm run preview`: servir el build localmente
 
-<div className="flex items-center mb-8">
-          <div className="flex-1 h-px bg-zinc-700"></div>
+## Firebase Hosting
 
-          <span className="px-4 text-sm text-gray-400 font-medium">
-            O continua con
-          </span>
+El proyecto incluye:
 
-          <div className="flex-1 h-px bg-zinc-700"></div>
-        </div>
+- `firebase.json` para publicar la carpeta `dist`
+- `.firebaserc` apuntando al proyecto `runtimer-b1688`
+- workflow de GitHub Actions para preview en PR y deploy live en `main`
 
-        <button
-          className="
-            w-full
-            flex
-            items-center
-            justify-center
-            gap-3
-            bg-white
-            hover:bg-gray-100
-            hover:scale-[1.02]
-            active:scale-95
-            transition-all
-            duration-300
-            rounded-2xl
-            py-4
-            text-black
-            font-semibold
-          "
-        >
-          <img
-            src="https://www.svgrepo.com/show/475656/google-color.svg"
-            alt="Google"
-            className="w-5 h-5"
-          />
-          Continuar con Google
-        </button>
-      </div>
-    </div>
-  );
-}
+El despliegue esta pensado solo para Firebase Hosting estatico. No usa Cloud Run, Cloud Functions ni Firebase App Hosting.
+
+## Secretos de GitHub requeridos
+
+- `FIREBASE_SERVICE_ACCOUNT`: JSON completo de una service account con permisos de deploy a Firebase Hosting
+
+## Variables de GitHub requeridas
+
+- `VITE_FIREBASE_API_KEY`
+- `VITE_FIREBASE_AUTH_DOMAIN`
+- `VITE_FIREBASE_DATABASE_URL`
+- `VITE_FIREBASE_PROJECT_ID`
+- `VITE_FIREBASE_STORAGE_BUCKET`
+- `VITE_FIREBASE_MESSAGING_SENDER_ID`
+- `VITE_FIREBASE_APP_ID`
+
+## Notas
+
+- Firestore y Realtime Database usan reglas distintas. La app asume que Firestore requiere autenticacion y que RTDB puede proveer telemetria de tiempo real.
+- Si es el primer deploy de Hosting para el proyecto, habilita Firebase Hosting en la consola antes de ejecutar el workflow.

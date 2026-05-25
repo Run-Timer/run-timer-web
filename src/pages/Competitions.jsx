@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
-import { db, auth } from "../services/authService";
-import { collection, onSnapshot, doc, updateDoc, arrayUnion, arrayRemove } from "firebase/firestore";
+import { auth } from "../services/authService";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
@@ -10,6 +9,10 @@ import {
   Users,
   ArrowLeft,
 } from "lucide-react";
+import {
+  subscribeToCompetitions,
+  toggleCompetitionRegistration,
+} from "../services/competitionService";
 
 function Competitions() {
   const navigate = useNavigate();
@@ -23,37 +26,50 @@ function Competitions() {
       return;
     }
 
-    // Escuchar la colección "competencias" en tiempo real desde Firestore
-    const unsubscribe = onSnapshot(collection(db, "competencias"), (snapshot) => {
-      const compsArray = [];
-      snapshot.forEach((doc) => {
-        const data = doc.data();
-        
-        // Formatear fecha si viene como Timestamp de Firebase
-        const formattedDate = data.date?.seconds 
-          ? new Date(data.date.seconds * 1000).toLocaleDateString()
-          : data.date;
+    const unsubscribe =
+      subscribeToCompetitions(
+        (snapshotCompetitions) => {
+          const compsArray =
+            snapshotCompetitions.map(
+              (competition) => {
+                const formattedDate =
+                  competition.date?.seconds
+                    ? new Date(
+                        competition.date.seconds *
+                          1000
+                      ).toLocaleDateString()
+                    : competition.date;
 
-        // Comprobar si el ID del usuario actual está en la lista de inscritos
-        const isRegistered = data.userIds?.includes(currentUser.uid) || false;
-        // Contar participantes reales basados en el arreglo o usar el número estático del documento
-        const participantsCount = data.userIds ? data.userIds.length : (data.participants || 0);
+                const isRegistered =
+                  competition.userIds?.includes(
+                    currentUser.uid
+                  ) || false;
 
-        compsArray.push({
-          id: doc.id,
-          ...data,
-          date: formattedDate,
-          registered: isRegistered,
-          participants: participantsCount
-        });
-      });
-      
-      setCompetitions(compsArray);
-      setLoading(false);
-    }, (error) => {
-      console.error("Error cargando competiciones:", error);
-      setLoading(false);
-    });
+                const participantsCount =
+                  competition.userIds
+                    ? competition.userIds.length
+                    : competition.participants || 0;
+
+                return {
+                  ...competition,
+                  date: formattedDate,
+                  registered: isRegistered,
+                  participants: participantsCount,
+                };
+              }
+            );
+
+          setCompetitions(compsArray);
+          setLoading(false);
+        },
+        (error) => {
+          console.error(
+            "Error cargando competiciones:",
+            error
+          );
+          setLoading(false);
+        }
+      );
 
     return () => unsubscribe();
   }, [navigate, currentUser]);
@@ -62,20 +78,17 @@ function Competitions() {
   const handleRegistration = async (competitionId, isRegistered) => {
     if (!currentUser) return;
 
-    const compRef = doc(db, "competencias", competitionId);
-
     try {
-      if (isRegistered) {
-        // Cancelar: remover el UID del piloto del arreglo en Firestore
-        await updateDoc(compRef, {
-          userIds: arrayRemove(currentUser.uid)
-        });
-      } else {
-        // Inscribirse: añadir el UID del piloto al arreglo en Firestore
-        await updateDoc(compRef, {
-          userIds: arrayUnion(currentUser.uid)
-        });
-      }
+      const competition = competitions.find(
+        (item) => item.id === competitionId
+      );
+
+      await toggleCompetitionRegistration(
+        competitionId,
+        currentUser.uid,
+        isRegistered,
+        competition?.sourceCollection
+      );
     } catch (error) {
       console.error("Error al gestionar la inscripción:", error);
     }

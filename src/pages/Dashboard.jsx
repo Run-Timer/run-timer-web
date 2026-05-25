@@ -14,11 +14,11 @@ import {
 } from "lucide-react";
 import logo from "../assets/logo.svg";
 
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "../context/useAuth";
 import { logoutUser } from "../services/authService";
-import { db, database } from "../firebase/firebase"; 
-import { collection, onSnapshot, query } from "firebase/firestore";
+import { database } from "../firebase/firebase";
 import { ref, onValue } from "firebase/database";
+import { subscribeToCompetitions } from "../services/competitionService";
 
 function Dashboard() {
   const navigate = useNavigate();
@@ -36,33 +36,38 @@ function Dashboard() {
   });
 
   useEffect(() => {
-    // ESCUCHA EN TIEMPO REAL DESDE FIRESTORE (Competencias)
-    const q = query(collection(db, "competitions")); 
-    
-    const unsubscribeFirestore = onSnapshot(q, (snapshot) => {
-      const data = [];
-      snapshot.forEach((doc) => {
-        data.push({ id: doc.id, ...doc.data() });
-      });
-      setCompetitions(data);
-      console.log("Competitions actualizadas en tiempo real:", data);
-    }, (error) => {
-      console.error("Error cargando competitions realtime:", error);
-    });
+    const unsubscribeFirestore =
+      subscribeToCompetitions(
+        (snapshotCompetitions) => {
+          setCompetitions(
+            snapshotCompetitions
+          );
+        },
+        (error) => {
+          console.error(
+            "Error cargando competitions realtime:",
+            error
+          );
+        }
+      );
 
-    // ESCUCHA EN TIEMPO REAL DESDE REALTIME DATABASE (Hardware / ESP32)
-    const esp32Ref = ref(database, "hardware/esp32"); 
-    
-    const unsubscribeRTDB = onValue(esp32Ref, (snapshot) => {
+    const realtimeRootRef = ref(database);
+
+    const unsubscribeRTDB = onValue(realtimeRootRef, (snapshot) => {
       const value = snapshot.val();
       if (value) {
+        const hardware = value.hardware?.esp32;
+        const currentTimeMs = value.tiempo_actual?.tiempoMs;
+        const fallbackTime = typeof currentTimeMs === "number"
+          ? `${(currentTimeMs / 1000).toFixed(2)}s`
+          : "0.00s";
+
         setEsp32Data({
-          online: value.online ?? false,
-          mejorTiempo: value.mejor_tiempo ? `${value.mejor_tiempo}s` : "0.00s",
-          sensoresActivos: value.sensores_count ?? "0",
-          participantes: value.participantes_count ?? "0"
+          online: hardware?.online ?? Boolean(value.comando || value.tiempo_actual),
+          mejorTiempo: hardware?.mejor_tiempo ? `${hardware.mejor_tiempo}s` : fallbackTime,
+          sensoresActivos: hardware?.sensores_count ?? "0",
+          participantes: hardware?.participantes_count ?? "0",
         });
-        console.log("Datos de hardware actualizados en tiempo real:", value);
       }
     }, (error) => {
       console.error("Error en RTDB:", error);
@@ -199,7 +204,7 @@ function Dashboard() {
             )}
 
             {/* Perfil Header */}
-            <button onClick={() => goTo("/Editprofile")} className="bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-2xl px-5 py-3 flex items-center gap-4 hover:bg-gray-100 dark:hover:bg-zinc-800 transition cursor-pointer shadow-sm text-left">
+            <button onClick={() => goTo("/editProfile")} className="bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-2xl px-5 py-3 flex items-center gap-4 hover:bg-gray-100 dark:hover:bg-zinc-800 transition cursor-pointer shadow-sm text-left">
               <img
                 src={userData?.photoUrl || currentUser?.photoURL || "https://ui-avatars.com/api/?name=RunTimer"}
                 alt="Perfil"
