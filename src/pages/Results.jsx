@@ -2,6 +2,7 @@ import { useEffect, useState, useMemo } from "react";
 import { collection, onSnapshot, query, where } from "firebase/firestore";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
+import PropTypes from "prop-types";
 import {
   Timer, Trophy, Medal, ArrowLeft,
   Activity, Star, CheckCircle, XCircle, AlertTriangle,
@@ -30,12 +31,14 @@ function StatusBadge({ status }) {
     </span>
   );
 }
+StatusBadge.propTypes = { status: PropTypes.string.isRequired };
 
 function StatusIcon({ status }) {
   if (status === "completed") return <CheckCircle size={14} className="text-green-400" />;
   if (status === "dnf")       return <AlertTriangle size={14} className="text-amber-400" />;
   return <XCircle size={14} className="text-red-400" />;
 }
+StatusIcon.propTypes = { status: PropTypes.string.isRequired };
 
 /* ─── componente principal ────────────────────────────── */
 
@@ -170,7 +173,7 @@ function Results() {
           {
             icon: <Timer size={22} />,
             label: "Mejor tiempo",
-            value: metrics.bestTime !== null ? formatMs(metrics.bestTime) : "--",
+            value: metrics.bestTime === null ? "--" : formatMs(metrics.bestTime),
             accent: metrics.bestTime !== null,
           },
           {
