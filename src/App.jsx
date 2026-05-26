@@ -12,35 +12,29 @@ import {
 import { AnimatePresence } from "framer-motion";
 
 import ProtectedRoute from "./components/ProtectedRoute";
+import RoleRoute from "./components/RoleRoute";
 
-const Competitions = lazy(() =>
-  import("./pages/Competitions")
-);
-const Dashboard = lazy(() =>
-  import("./pages/Dashboard")
-);
-const Login = lazy(() =>
-  import("./pages/Login")
-);
-const ParticipantProfile = lazy(() =>
-  import("./pages/ParticipantProfile")
-);
-const Profile = lazy(() =>
-  import("./pages/Profile")
-);
-const Register = lazy(() =>
-  import("./pages/register")
-);
-const Results = lazy(() =>
-  import("./pages/Results")
-);
-const Settings = lazy(() =>
-  import("./pages/Settings")
-);
-const EditProfile = lazy(() =>
-  import("./pages/EditProfile")
-);
+/* ─── Rutas públicas ──────────────────────────────────── */
+const Login = lazy(() => import("./pages/Login"));
+const Register = lazy(() => import("./pages/register"));
+const LiveRaces = lazy(() => import("./pages/LiveRaces"));
 
+/* ─── Rutas compartidas (cualquier usuario autenticado) ── */
+const Dashboard = lazy(() => import("./pages/Dashboard"));
+const Profile = lazy(() => import("./pages/Profile"));
+const EditProfile = lazy(() => import("./pages/EditProfile"));
+const ParticipantProfile = lazy(() => import("./pages/ParticipantProfile"));
+const Settings = lazy(() => import("./pages/Settings"));
+const Results = lazy(() => import("./pages/Results"));
+
+/* ─── Rutas restringidas (admin / judge) ─────────────── */
+const Competitions = lazy(() => import("./pages/Competitions"));
+
+// Roles con acceso de gestión (admin + judge)
+const MANAGE_ROLES = ["admin", "judge"];
+
+
+/* ─── Helpers ─────────────────────────────────────────── */
 function RouteLoading() {
   return (
     <div className="min-h-screen bg-gray-50 text-gray-900 dark:bg-black dark:text-white flex items-center justify-center transition-colors duration-300">
@@ -52,94 +46,93 @@ function RouteLoading() {
 }
 
 function withSuspense(element) {
-  return (
-    <Suspense fallback={<RouteLoading />}>
-      {element}
-    </Suspense>
-  );
+  return <Suspense fallback={<RouteLoading />}>{element}</Suspense>;
 }
 
+/** Ruta que requiere solo autenticación (cualquier rol). */
 function withProtection(element) {
+  return <ProtectedRoute>{element}</ProtectedRoute>;
+}
+
+/** Ruta que requiere autenticación + rol específico. */
+function withRole(element, allowedRoles) {
   return (
-    <ProtectedRoute>
+    <RoleRoute allowedRoles={allowedRoles}>
       {element}
-    </ProtectedRoute>
+    </RoleRoute>
   );
 }
 
+/* ─── Router animado ─────────────────────────────────── */
 function AnimatedRoutes() {
   const location = useLocation();
 
   return (
     <AnimatePresence mode="wait">
       <Routes location={location} key={location.pathname}>
+
+        {/* ══ RUTAS PÚBLICAS ══════════════════════════════ */}
         <Route
           path="/login"
           element={withSuspense(<Login />)}
         />
         <Route
           path="/register"
-          element={withSuspense(
-            <Register />
-          )}
+          element={withSuspense(<Register />)}
         />
-        <Route path="/" element={<Navigate to="/dashboard" />} />
+        {/* Vista pública: cualquiera puede ver carreras en vivo */}
+        <Route
+          path="/live"
+          element={withSuspense(<LiveRaces />)}
+        />
 
+        {/* Redirigir raíz al dashboard */}
+        <Route path="/" element={<Navigate to="/dashboard" replace />} />
+
+        {/* ══ RUTAS AUTENTICADAS (cualquier rol) ══════════ */}
         <Route
           path="/dashboard"
-          element={withProtection(
-            withSuspense(<Dashboard />)
-          )}
-        />
-        <Route
-          path="/results"
-          element={withProtection(
-            withSuspense(<Results />)
-          )}
-        />
-        <Route
-          path="/competitions"
-          element={withProtection(
-            withSuspense(
-              <Competitions />
-            )
-          )}
-        />
-        <Route
-          path="/settings"
-          element={withProtection(
-            withSuspense(<Settings />)
-          )}
+          element={withProtection(withSuspense(<Dashboard />))}
         />
         <Route
           path="/profile"
-          element={withProtection(
-            withSuspense(<Profile />)
-          )}
-        />
-        <Route
-          path="/participantProfile"
-          element={withProtection(
-            withSuspense(
-              <ParticipantProfile />
-            )
-          )}
+          element={withProtection(withSuspense(<Profile />))}
         />
         <Route
           path="/editProfile"
-          element={withProtection(
-            withSuspense(
-              <EditProfile />
-            )
-          )}
+          element={withProtection(withSuspense(<EditProfile />))}
         />
+        <Route
+          path="/participantProfile"
+          element={withProtection(withSuspense(<ParticipantProfile />))}
+        />
+        <Route
+          path="/settings"
+          element={withProtection(withSuspense(<Settings />))}
+        />
+        {/* Resultados: todos los usuarios autenticados pueden ver */}
+        <Route
+          path="/results"
+          element={withProtection(withSuspense(<Results />))}
+        />
+
+        {/* ══ RUTAS RESTRINGIDAS POR ROL ═══════════════════
+            Competitions → solo admin y judge pueden gestionar  */}
+        <Route
+          path="/competitions"
+          element={withRole(withSuspense(<Competitions />), MANAGE_ROLES)}
+        />
+
+        {/* Cualquier ruta desconocida → dashboard */}
+        <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Routes>
     </AnimatePresence>
   );
 }
 
+/* ─── App ────────────────────────────────────────────── */
 function App() {
-  // ESCUCHA E INICIALIZACIÓN GLOBAL DEL TEMA
+  // Inicialización del tema al cargar
   useEffect(() => {
     const savedTheme = localStorage.getItem("theme") || "dark";
     if (savedTheme === "dark") {

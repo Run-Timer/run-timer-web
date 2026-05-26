@@ -119,10 +119,15 @@ function Dashboard() {
             <LayoutDashboard size={22} />
             Dashboard
           </button>
-          <button onClick={() => goTo("/competitions")} className="flex items-center gap-4 px-5 py-4 rounded-2xl bg-gray-100/70 dark:bg-zinc-900 hover:bg-gray-200/80 dark:hover:bg-zinc-800 text-gray-700 dark:text-gray-300 transition font-medium">
-            <Trophy size={22} />
-            Competencias
-          </button>
+
+          {/* Solo admin y judge pueden acceder a la gestión de competencias */}
+          {(userData?.role === "admin" || userData?.role === "judge") && (
+            <button onClick={() => goTo("/competitions")} className="flex items-center gap-4 px-5 py-4 rounded-2xl bg-gray-100/70 dark:bg-zinc-900 hover:bg-gray-200/80 dark:hover:bg-zinc-800 text-gray-700 dark:text-gray-300 transition font-medium">
+              <Trophy size={22} />
+              Competencias
+            </button>
+          )}
+
           <button onClick={() => goTo("/results")} className="flex items-center gap-4 px-5 py-4 rounded-2xl bg-gray-100/70 dark:bg-zinc-900 hover:bg-gray-200/80 dark:hover:bg-zinc-800 text-gray-700 dark:text-gray-300 transition font-medium">
             <Activity size={22} />
             Resultados
@@ -135,6 +140,17 @@ function Dashboard() {
             <Settings size={22} />
             Configuración
           </button>
+
+          {/* Acceso rápido a la vista pública de carreras en vivo */}
+          <a
+            href="/live"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-4 px-5 py-4 rounded-2xl bg-red-500/10 hover:bg-red-500/20 text-red-500 transition font-medium border border-red-500/20"
+          >
+            <Wifi size={22} />
+            Ver en vivo (público)
+          </a>
         </nav>
 
         <div className="mt-auto">
