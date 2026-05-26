@@ -11,7 +11,6 @@ import {
   Calendar,
   Layers,
   Award,
-  BookOpen,
 } from "lucide-react";
 import { db } from "../firebase/firebase";
 import { useAuth } from "../context/useAuth";

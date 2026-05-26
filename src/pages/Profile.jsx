@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { db, auth } from "../services/authService";
-import { doc, getDoc, collection, query, where, limit, getDocs } from "firebase/firestore";
+import { doc, getDoc, collection, query, where, getDocs } from "firebase/firestore";
 import { motion } from "framer-motion";
 import {
   Trophy,
