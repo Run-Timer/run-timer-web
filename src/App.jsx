@@ -29,6 +29,7 @@ const Results = lazy(() => import("./pages/Results"));
 
 /* ─── Rutas restringidas (admin / judge) ─────────────── */
 const Competitions = lazy(() => import("./pages/Competitions"));
+const UsersAdmin = lazy(() => import("./pages/UsersAdmin"));
 
 // Roles con acceso de gestión (admin + judge)
 const MANAGE_ROLES = ["admin", "judge"];
@@ -121,6 +122,10 @@ function AnimatedRoutes() {
         <Route
           path="/competitions"
           element={withRole(withSuspense(<Competitions />), MANAGE_ROLES)}
+        />
+        <Route
+          path="/users"
+          element={withRole(withSuspense(<UsersAdmin />), ["admin"])}
         />
 
         {/* Cualquier ruta desconocida → dashboard */}

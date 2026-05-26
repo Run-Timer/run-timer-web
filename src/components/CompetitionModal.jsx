@@ -16,8 +16,9 @@ function CompetitionModal({ isOpen, onClose, onSave, initialData, currentUser })
   });
 
   useEffect(() => {
+    let timeoutId;
     if (initialData) {
-      setFormData({
+      timeoutId = setTimeout(() => setFormData({
         name: initialData.name || "",
         location: initialData.location || "",
         description: initialData.description || "",
@@ -28,9 +29,9 @@ function CompetitionModal({ isOpen, onClose, onSave, initialData, currentUser })
         date: initialData.date?.seconds 
           ? new Date(initialData.date.seconds * 1000).toISOString().split("T")[0] 
           : (initialData.date || "")
-      });
+      }), 0);
     } else {
-      setFormData({
+      timeoutId = setTimeout(() => setFormData({
         name: "",
         location: "",
         description: "",
@@ -39,8 +40,10 @@ function CompetitionModal({ isOpen, onClose, onSave, initialData, currentUser })
         status: "active",
         judgeUid: "",
         date: new Date().toISOString().split("T")[0]
-      });
+      }), 0);
     }
+    
+    return () => clearTimeout(timeoutId);
   }, [initialData, isOpen]);
 
   if (!isOpen) return null;

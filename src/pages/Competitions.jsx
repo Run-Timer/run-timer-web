@@ -119,7 +119,7 @@ function Competitions() {
   };
 
   const handleDelete = async (id, sourceCollection) => {
-    if (window.confirm("¿Seguro que deseas eliminar esta competencia?")) {
+    if (globalThis.confirm("¿Seguro que deseas eliminar esta competencia?")) {
       try {
         await deleteCompetition(id, sourceCollection);
       } catch (error) {

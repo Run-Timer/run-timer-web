@@ -128,6 +128,14 @@ function Dashboard() {
             </button>
           )}
 
+          {/* Solo admin puede gestionar usuarios */}
+          {userData?.role === "admin" && (
+            <button onClick={() => goTo("/users")} className="flex items-center gap-4 px-5 py-4 rounded-2xl bg-gray-100/70 dark:bg-zinc-900 hover:bg-gray-200/80 dark:hover:bg-zinc-800 text-gray-700 dark:text-gray-300 transition font-medium">
+              <Users size={22} />
+              Gestión Usuarios
+            </button>
+          )}
+
           <button onClick={() => goTo("/results")} className="flex items-center gap-4 px-5 py-4 rounded-2xl bg-gray-100/70 dark:bg-zinc-900 hover:bg-gray-200/80 dark:hover:bg-zinc-800 text-gray-700 dark:text-gray-300 transition font-medium">
             <Activity size={22} />
             Resultados
