@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { auth } from "../services/authService";
+import { useAuth } from "../context/useAuth";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
@@ -8,17 +8,30 @@ import {
   MapPin,
   Users,
   ArrowLeft,
+  Plus,
+  Edit2,
+  Trash2,
 } from "lucide-react";
 import {
   subscribeToCompetitions,
   toggleCompetitionRegistration,
+  createCompetition,
+  updateCompetition,
+  deleteCompetition,
 } from "../services/competitionService";
+import CompetitionModal from "../components/CompetitionModal";
 
 function Competitions() {
   const navigate = useNavigate();
+  const { currentUser, userData } = useAuth();
   const [competitions, setCompetitions] = useState([]);
   const [loading, setLoading] = useState(true);
-  const currentUser = auth.currentUser;
+
+  // Modal State
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingComp, setEditingComp] = useState(null);
+  
+  const isAdmin = userData?.role === "admin";
 
   useEffect(() => {
     if (!currentUser) {
@@ -74,15 +87,11 @@ function Competitions() {
     return () => unsubscribe();
   }, [navigate, currentUser]);
 
-  // Función lógica para Inscribirse / Cancelar Inscripción real en Firestore
   const handleRegistration = async (competitionId, isRegistered) => {
-    if (!currentUser) return;
+    if (!currentUser || isAdmin) return;
 
     try {
-      const competition = competitions.find(
-        (item) => item.id === competitionId
-      );
-
+      const competition = competitions.find((item) => item.id === competitionId);
       await toggleCompetitionRegistration(
         competitionId,
         currentUser.uid,
@@ -91,6 +100,32 @@ function Competitions() {
       );
     } catch (error) {
       console.error("Error al gestionar la inscripción:", error);
+    }
+  };
+
+  const handleSaveModal = async (data, id, sourceCollection) => {
+    try {
+      if (id) {
+        await updateCompetition(id, data, sourceCollection);
+      } else {
+        await createCompetition(data);
+      }
+      setIsModalOpen(false);
+      setEditingComp(null);
+    } catch (error) {
+      console.error("Error guardando competencia:", error);
+      alert("Error al guardar: " + error.message);
+    }
+  };
+
+  const handleDelete = async (id, sourceCollection) => {
+    if (window.confirm("¿Seguro que deseas eliminar esta competencia?")) {
+      try {
+        await deleteCompetition(id, sourceCollection);
+      } catch (error) {
+        console.error("Error eliminando:", error);
+        alert("Error al eliminar.");
+      }
     }
   };
 
@@ -121,13 +156,30 @@ function Competitions() {
       </div>
 
       {/* HEADER */}
-      <div className="mb-10">
-        <h1 className="text-4xl font-bold mb-3 text-gray-900 dark:text-white">
-          Competiciones
-        </h1>
-        <p className="text-gray-500 dark:text-gray-400 text-lg">
-          Próximas competencias disponibles para participar.
-        </p>
+      <div className="mb-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-4xl font-bold mb-3 text-gray-900 dark:text-white">
+            Competiciones
+          </h1>
+          <p className="text-gray-500 dark:text-gray-400 text-lg">
+            {isAdmin 
+              ? "Gestiona todas las competencias del sistema." 
+              : "Próximas competencias disponibles para participar."}
+          </p>
+        </div>
+        
+        {isAdmin && (
+          <button 
+            onClick={() => {
+              setEditingComp(null);
+              setIsModalOpen(true);
+            }}
+            className="flex items-center gap-2 px-5 py-3 rounded-2xl bg-red-500 hover:bg-red-600 text-white font-bold transition shadow-md shadow-red-500/20"
+          >
+            <Plus size={20} />
+            Nueva Competencia
+          </button>
+        )}
       </div>
 
       {/* EMPTY STATE & MAIN CONTENT */}
@@ -224,16 +276,40 @@ function Competitions() {
 
                     {/* ACTION */}
                     <td className="py-6">
-                      <button
-                        onClick={() => handleRegistration(competition.id, competition.registered)}
-                        className={`px-5 py-2.5 rounded-xl font-bold text-sm transition shadow-sm ${
-                          competition.registered
-                            ? "bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 border border-red-200/20"
-                            : "bg-red-500 hover:bg-red-600 text-white"
-                        }`}
-                      >
-                        {competition.registered ? "Cancelar inscripción" : "Inscribirse"}
-                      </button>
+                      {isAdmin ? (
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => {
+                              // Buscar doc original de state para edición
+                              const raw = competitions.find(c => c.id === competition.id);
+                              setEditingComp(raw);
+                              setIsModalOpen(true);
+                            }}
+                            className="p-2.5 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:text-white hover:bg-blue-500 transition"
+                            title="Editar"
+                          >
+                            <Edit2 size={18} />
+                          </button>
+                          <button
+                            onClick={() => handleDelete(competition.id, competition.sourceCollection)}
+                            className="p-2.5 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:text-white hover:bg-red-500 transition"
+                            title="Eliminar"
+                          >
+                            <Trash2 size={18} />
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => handleRegistration(competition.id, competition.registered)}
+                          className={`px-5 py-2.5 rounded-xl font-bold text-sm transition shadow-sm ${
+                            competition.registered
+                              ? "bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 border border-red-200/20"
+                              : "bg-red-500 hover:bg-red-600 text-white"
+                          }`}
+                        >
+                          {competition.registered ? "Cancelar inscripción" : "Inscribirse"}
+                        </button>
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -242,6 +318,18 @@ function Competitions() {
           </div>
         </div>
       )}
+
+      {/* Modal para admin */}
+      <CompetitionModal
+        isOpen={isModalOpen}
+        onClose={() => {
+          setIsModalOpen(false);
+          setEditingComp(null);
+        }}
+        onSave={handleSaveModal}
+        initialData={editingComp}
+        currentUser={currentUser}
+      />
     </motion.div>
   );
 }
