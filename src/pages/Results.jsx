@@ -64,9 +64,12 @@ function Results() {
   /* 2 ── race_times de TODOS los robots del usuario */
   useEffect(() => {
     if (robots.length === 0) {
-      setRaceTimes([]);
-      setLoading(false);
-      return;
+      // Diferir setState para evitar llamada síncrona dentro del efecto
+      const id = setTimeout(() => {
+        setRaceTimes([]);
+        setLoading(false);
+      }, 0);
+      return () => clearTimeout(id);
     }
 
     const robotIds = robots.map((r) => r.id);
