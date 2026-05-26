@@ -11,6 +11,7 @@ import {
   Users,
   Wifi,
   X,
+  Cpu,
 } from "lucide-react";
 import logo from "../assets/logo.svg";
 
@@ -147,6 +148,11 @@ function Dashboard() {
           <button onClick={() => goTo("/results")} className="flex items-center gap-4 px-5 py-4 rounded-2xl bg-gray-100/70 dark:bg-zinc-900 hover:bg-gray-200/80 dark:hover:bg-zinc-800 text-gray-700 dark:text-gray-300 transition font-medium">
             <Activity size={22} />
             Resultados
+          </button>
+          
+          <button onClick={() => goTo("/robots")} className="flex items-center gap-4 px-5 py-4 rounded-2xl bg-gray-100/70 dark:bg-zinc-900 hover:bg-gray-200/80 dark:hover:bg-zinc-800 text-gray-700 dark:text-gray-300 transition font-medium">
+            <Cpu size={22} />
+            Mis Robots
           </button>
           <button onClick={() => goTo("/profile")} className="flex items-center gap-4 px-5 py-4 rounded-2xl bg-gray-100/70 dark:bg-zinc-900 hover:bg-gray-200/80 dark:hover:bg-zinc-800 text-gray-700 dark:text-gray-300 transition font-medium">
             <Users size={22} />

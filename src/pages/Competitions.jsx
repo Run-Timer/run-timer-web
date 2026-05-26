@@ -11,7 +11,21 @@ import {
   Plus,
   Edit2,
   Trash2,
+  Cpu,
+  Check,
 } from "lucide-react";
+import {
+  collection,
+  query,
+  where,
+  getDocs,
+  doc,
+  updateDoc,
+  deleteDoc,
+  setDoc,
+  serverTimestamp,
+} from "firebase/firestore";
+import { db } from "../firebase/firebase";
 import {
   subscribeToCompetitions,
   toggleCompetitionRegistration,
@@ -31,6 +45,13 @@ function Competitions() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingComp, setEditingComp] = useState(null);
   
+  // Robot Registration States
+  const [isRobotModalOpen, setIsRobotModalOpen] = useState(false);
+  const [myRobots, setMyRobots] = useState([]);
+  const [selectedRobotId, setSelectedRobotId] = useState("");
+  const [targetCompId, setTargetCompId] = useState("");
+  const [targetSourceCol, setTargetSourceCol] = useState("competitions");
+
   const isAdmin = userData?.role === "admin";
 
   useEffect(() => {
@@ -90,16 +111,98 @@ function Competitions() {
   const handleRegistration = async (competitionId, isRegistered) => {
     if (!currentUser || isAdmin) return;
 
+    const competition = competitions.find((item) => item.id === competitionId);
+    const sourceCollection = competition?.sourceCollection || "competitions";
+
+    if (isRegistered) {
+      if (!globalThis.confirm("¿Seguro que deseas cancelar tu inscripción? Se eliminará tu robot de la competencia.")) return;
+
+      try {
+        const q = query(
+          collection(db, "robots"),
+          where("captainUid", "==", currentUser.uid),
+          where("compIdActual", "==", competitionId)
+        );
+        const snap = await getDocs(q);
+
+        if (!snap.empty) {
+          for (const robotDoc of snap.docs) {
+            await updateDoc(doc(db, "robots", robotDoc.id), { compIdActual: "" });
+            await deleteDoc(doc(db, "competitions", competitionId, "enrollments", robotDoc.id));
+          }
+        }
+
+        await toggleCompetitionRegistration(
+          competitionId,
+          currentUser.uid,
+          true,
+          sourceCollection
+        );
+      } catch (error) {
+        console.error("Error cancelando inscripción:", error);
+      }
+    } else {
+      try {
+        const q = query(
+          collection(db, "robots"),
+          where("captainUid", "==", currentUser.uid)
+        );
+        const snap = await getDocs(q);
+
+        if (snap.empty) {
+          alert("Debes registrar al menos un robot en la sección 'Mis Robots' para poder inscribirte en la competencia.");
+          navigate("/robots");
+          return;
+        }
+
+        const robotsList = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        const available = robotsList.filter(r => !r.compIdActual);
+
+        if (available.length === 0) {
+          alert("Todos tus robots ya están inscritos en otras competencias. Por favor, crea un nuevo robot o libera uno existente.");
+          return;
+        }
+
+        setMyRobots(available);
+        setSelectedRobotId(available[0].id);
+        setTargetCompId(competitionId);
+        setTargetSourceCol(sourceCollection);
+        setIsRobotModalOpen(true);
+      } catch (error) {
+        console.error("Error obteniendo robots:", error);
+      }
+    }
+  };
+
+  const handleConfirmEnrollment = async () => {
+    if (!selectedRobotId || !targetCompId) return;
+
     try {
-      const competition = competitions.find((item) => item.id === competitionId);
+      await setDoc(doc(db, "competitions", targetCompId, "enrollments", selectedRobotId), {
+        robotId: selectedRobotId,
+        captainUid: currentUser.uid,
+        enrolledAt: serverTimestamp(),
+        confirmed: true,
+        participantNumber: 0,
+      });
+
+      await updateDoc(doc(db, "robots", selectedRobotId), {
+        compIdActual: targetCompId,
+      });
+
       await toggleCompetitionRegistration(
-        competitionId,
+        targetCompId,
         currentUser.uid,
-        isRegistered,
-        competition?.sourceCollection
+        false,
+        targetSourceCol
       );
-    } catch (error) {
-      console.error("Error al gestionar la inscripción:", error);
+
+      setIsRobotModalOpen(false);
+      setTargetCompId("");
+      setSelectedRobotId("");
+    } catch (e) {
+      console.error("Error confirmando inscripción:", e);
+      alert("Error: " + e.message);
     }
   };
 
@@ -330,6 +433,65 @@ function Competitions() {
         initialData={editingComp}
         currentUser={currentUser}
       />
+
+      {/* ══ MODAL DE SELECCIÓN DE ROBOT (USER) ══ */}
+      {isRobotModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl w-full max-w-md overflow-hidden shadow-xl">
+            <div className="flex justify-between items-center p-5 border-b border-zinc-200 dark:border-zinc-800">
+              <h2 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                <Cpu className="text-red-500" size={20} />
+                Selecciona tu Robot
+              </h2>
+            </div>
+            
+            <div className="p-5 space-y-4">
+              <p className="text-sm text-gray-500 dark:text-zinc-400">
+                Selecciona cuál de tus robots disponibles inscribirás en esta competencia:
+              </p>
+
+              <div className="space-y-2.5 max-h-[200px] overflow-y-auto pr-1">
+                {myRobots.map(robot => (
+                  <div
+                    key={robot.id}
+                    onClick={() => setSelectedRobotId(robot.id)}
+                    className={`p-3.5 rounded-xl border flex items-center justify-between cursor-pointer transition ${
+                      selectedRobotId === robot.id
+                        ? "bg-red-500/10 border-red-500/40 text-red-600 dark:text-red-400"
+                        : "bg-gray-50 dark:bg-black border-gray-200 dark:border-zinc-800 text-gray-800 dark:text-zinc-300 hover:bg-gray-100 dark:hover:bg-zinc-800"
+                    }`}
+                  >
+                    <div>
+                      <p className="font-bold text-sm">{robot.name}</p>
+                      <span className="text-[10px] uppercase font-mono tracking-wider text-gray-400">{robot.tipoRobot} ({robot.category})</span>
+                    </div>
+                    {selectedRobotId === robot.id && (
+                      <Check size={18} className="stroke-[3px]" />
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              <div className="pt-4 border-t border-zinc-100 dark:border-zinc-800/80 flex justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => setIsRobotModalOpen(false)}
+                  className="px-5 py-2.5 rounded-xl font-bold text-gray-700 dark:text-zinc-300 hover:bg-gray-100 dark:hover:bg-zinc-800 transition text-sm"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  onClick={handleConfirmEnrollment}
+                  className="px-5 py-2.5 rounded-xl font-bold bg-red-500 hover:bg-red-600 text-white transition shadow-md shadow-red-500/20 text-sm"
+                >
+                  Confirmar Inscripción
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </motion.div>
   );
 }

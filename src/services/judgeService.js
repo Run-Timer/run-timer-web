@@ -153,7 +153,8 @@ const calcularBestLap = async ({ compId, robotId, tiempoMs, status }) => {
     const tiempos = snap.docs.map((d) => d.data().finalTimeMs ?? 0);
     const menor = Math.min(...tiempos);
     return tiempoMs < menor;
-  } catch (e) {
+  } catch (error) {
+    console.error("Error al calcular best lap:", error);
     return true; // Asumir best lap si falla
   }
 };

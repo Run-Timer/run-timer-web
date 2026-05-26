@@ -62,29 +62,69 @@ function Profile() {
           }));
         }
 
-        // 2. Conseguir historial corto para el perfil (últimos 3) desde Firestore
-        const q = query(
-          collection(db, "resultados"),
-          where("userId", "==", user.uid),
-          limit(3)
+        // 2. Conseguir robots del capitán
+        const robotsQuery = query(
+          collection(db, "robots"),
+          where("captainUid", "==", user.uid)
         );
-        const querySnapshot = await getDocs(q);
-        const userHistory = [];
-        let best = Infinity;
-        let wins = 0;
-
-        querySnapshot.forEach((doc) => {
-          const data = doc.data();
-          userHistory.push({ id: doc.id, ...data });
-          
-          if (parseFloat(data.time) < best) best = parseFloat(data.time);
-          if (data.position === "1°" || data.position === 1) wins++;
+        const robotsSnap = await getDocs(robotsQuery);
+        const robotMap = {};
+        const robotIds = [];
+        robotsSnap.forEach((d) => {
+          robotMap[d.id] = d.data().name;
+          robotIds.push(d.id);
         });
 
-        setHistory(userHistory);
+        const userHistory = [];
+        let best = Infinity;
+        let bestLapsCount = 0;
+
+        if (robotIds.length > 0) {
+          // Consultar tiempos de carrera de sus robots (limitado a 10 robots para el operador 'in')
+          const timesQuery = query(
+            collection(db, "race_times"),
+            where("robotId", "in", robotIds.slice(0, 10))
+          );
+          const timesSnap = await getDocs(timesQuery);
+
+          // Cargar lookup de competencias para el historial
+          const compsSnap = await getDocs(collection(db, "competitions"));
+          const compMap = {};
+          compsSnap.forEach(d => {
+            compMap[d.id] = d.data().name;
+          });
+
+          timesSnap.forEach((doc) => {
+            const data = doc.data();
+            const timeVal = data.finalTimeMs ?? data.timeMs ?? 0;
+            
+            userHistory.push({
+              id: doc.id,
+              competition: compMap[data.compId] || "Torneo RunTimer",
+              robotName: robotMap[data.robotId] || "Robot",
+              date: data.registeredAt?.seconds 
+                ? new Date(data.registeredAt.seconds * 1000).toLocaleDateString()
+                : "Reciente",
+              time: timeVal > 0 ? `${(timeVal / 1000).toFixed(3)}s` : data.status.toUpperCase(),
+              status: data.status,
+            });
+
+            if (data.status === "completed" && timeVal > 0 && timeVal < best) {
+              best = timeVal;
+            }
+            if (data.bestLap === true) {
+              bestLapsCount++;
+            }
+          });
+
+          // Ordenar el historial por fecha descendente
+          userHistory.sort((a, b) => b.id.localeCompare(a.id));
+        }
+
+        setHistory(userHistory.slice(0, 3)); // Mostrar últimos 3 en el perfil
         setStats({
-          bestTime: best !== Infinity ? `${best}s` : "--",
-          wins: wins,
+          bestTime: best !== Infinity ? `${(best / 1000).toFixed(3)}s` : "--",
+          wins: bestLapsCount,
           total: userHistory.length,
         });
 
@@ -237,7 +277,7 @@ function Profile() {
                 <th className="pb-4 font-semibold">Competencia</th>
                 <th className="pb-4 font-semibold">Fecha</th>
                 <th className="pb-4 font-semibold">Tiempo</th>
-                <th className="pb-4 font-semibold">Posición</th>
+                <th className="pb-4 font-semibold">Robot</th>
               </tr>
             </thead>
             <tbody>
@@ -245,8 +285,8 @@ function Profile() {
                 <tr key={item.id} className="border-b border-gray-100 dark:border-zinc-800/60 hover:bg-gray-50 dark:hover:bg-zinc-800/40 text-gray-900 dark:text-white transition">
                   <td className="py-5 font-semibold">{item.competition}</td>
                   <td className="py-5 text-gray-500 dark:text-gray-400">{item.date}</td>
-                  <td className="py-5 font-bold text-green-600 dark:text-green-400">{item.time}s</td>
-                  <td className="py-5 font-medium">{item.position}°</td>
+                  <td className="py-5 font-bold text-green-600 dark:text-green-400">{item.time}</td>
+                  <td className="py-5 font-medium">{item.robotName}</td>
                 </tr>
               ))}
               {history.length === 0 && (

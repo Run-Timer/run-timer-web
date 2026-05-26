@@ -1,11 +1,10 @@
 import { useEffect, useState } from "react";
 import { collection, onSnapshot, doc, getDoc, query, where } from "firebase/firestore";
 import { useNavigate } from "react-router-dom";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import {
   Trophy,
   ArrowLeft,
-  Activity,
   User,
   Zap,
   Check,
@@ -13,7 +12,6 @@ import {
   XCircle,
   Play,
   RotateCcw,
-  Clock,
   ShieldAlert,
 } from "lucide-react";
 import { db } from "../firebase/firebase";
@@ -83,12 +81,13 @@ function JudgePanel() {
     return () => unsubscribe();
   }, []);
 
-  // 3. Obtener robots inscritos y race_times de la competencia seleccionada
   useEffect(() => {
     if (!selectedComp) {
-      setEnrolledRobots([]);
-      setRaceTimes([]);
-      return;
+      const timeoutId = setTimeout(() => {
+        setEnrolledRobots([]);
+        setRaceTimes([]);
+      }, 0);
+      return () => clearTimeout(timeoutId);
     }
 
     // A. Escuchar enrollments (subcolección de competencia)

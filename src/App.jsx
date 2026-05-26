@@ -25,6 +25,7 @@ const Profile = lazy(() => import("./pages/Profile"));
 const EditProfile = lazy(() => import("./pages/EditProfile"));
 const ParticipantProfile = lazy(() => import("./pages/ParticipantProfile"));
 const Settings = lazy(() => import("./pages/Settings"));
+const MyRobots = lazy(() => import("./pages/MyRobots"));
 const Results = lazy(() => import("./pages/Results"));
 
 /* ─── Rutas restringidas (admin / judge) ─────────────── */
@@ -111,6 +112,10 @@ function AnimatedRoutes() {
         <Route
           path="/settings"
           element={withProtection(withSuspense(<Settings />))}
+        />
+        <Route
+          path="/robots"
+          element={withProtection(withSuspense(<MyRobots />))}
         />
         {/* Resultados: todos los usuarios autenticados pueden ver */}
         <Route
